@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { PoetOption } from '../types';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_URL = process.env.REACT_APP_API_URL || 'https://rasberry-production.up.railway.app';
 
 export const generatePoem = async (
   image: Blob,
