@@ -44,7 +44,6 @@ export const generatePoemFromImage = async (
     {
       model: config.openai.model,
       messages,
-      temperature: config.openai.temperature,
       max_completion_tokens: config.openai.maxTokens
     },
     {
