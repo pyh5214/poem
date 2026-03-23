@@ -8,7 +8,7 @@ export const config = {
   apiKey: process.env.API_KEY || '',
   uploadsDir: path.join(__dirname, '../../uploads'),
   openai: {
-    model: 'gpt-4o',
+    model: 'gpt-5.4-mini',
     maxTokens: 500,
     timeout: 60000,
     apiUrl: 'https://api.openai.com/v1/chat/completions'
