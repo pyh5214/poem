@@ -4,6 +4,7 @@ export interface SavedPostcard {
   poem: string;
   poetStyle: string;
   createdAt: string;
+  audioData?: string; // base64 encoded MP3
 }
 
 const STORAGE_KEY = 'saved_postcards';

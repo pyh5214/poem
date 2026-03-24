@@ -8,6 +8,15 @@ yarn-error.log*
 
 # Environment variables
 .env
+.env.local
+.env.production
+backend/.env
+
+# Google Cloud credentials (NEVER commit these!)
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
 
 # Output directories
 dist/
@@ -28,6 +37,23 @@ build/
 
 # Coverage reports (테스트 커버리지)
 coverage/
+
+# Test output files
+*.wav
+music_test_output.json
+
+# SQLite temp files
+*.db-shm
+*.db-wal
+*.db-journal
+
+# Unrelated directories
+claude-nextjs-starters/
+stitch_write_poem/
+
+# Windows shortcuts and temp files
+*.lnk
+nul
 
 # Parcel cache (사용하는 경우)
 .cache/
