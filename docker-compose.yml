@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: poem-backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
+    volumes:
+      - ./buoyant-facet-375016-b0e8ddd389cd.json:/app/credentials.json:ro
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        REACT_APP_API_URL: http://${HOST_IP:-localhost}:5000
+        HOST_IP: ${HOST_IP:-localhost}
+    container_name: poem-frontend
+    ports:
+      - "3000:80"
+      - "3443:443"
+    depends_on:
+      - backend
+    restart: unless-stopped

@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Container, Button, Typography, IconButton, CircularProgress } from '@mui/material';
 import {
-  Save as SaveIcon,
+  Download as DownloadIcon,
   Share as ShareIcon,
   Refresh as RefreshIcon,
   ArrowBack as BackIcon,
   MusicNote as MusicIcon,
 } from '@mui/icons-material';
+import html2canvas from 'html2canvas';
 import { PostcardView } from '../components/PostcardView';
 import { MusicPlayer } from '../components/MusicPlayer';
 import { useAppContext } from '../context/AppContext';
@@ -21,6 +22,7 @@ const ResultPage: React.FC = () => {
   const [audioData, setAudioData] = useState<string | null>(null);
   const [isGeneratingMusic, setIsGeneratingMusic] = useState(false);
   const [musicError, setMusicError] = useState<string | null>(null);
+  const postcardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!generatedResult) {
@@ -63,7 +65,17 @@ const ResultPage: React.FC = () => {
     }
   };
 
-  const handleSave = () => {
+  const capturePostcardImage = async (): Promise<Blob | null> => {
+    if (!postcardRef.current) return null;
+    const canvas = await html2canvas(postcardRef.current, {
+      useCORS: true,
+      scale: 2,
+      backgroundColor: '#ffffff',
+    });
+    return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png'));
+  };
+
+  const handleSave = async () => {
     savePostcard({
       imageData: generatedResult.imageData,
       poem: generatedResult.poem,
@@ -71,18 +83,41 @@ const ResultPage: React.FC = () => {
       audioData: audioData || undefined,
     });
 
-    alert('저장되었습니다!');
-    navigate('/library');
+    // 엽서 이미지 다운로드
+    const blob = await capturePostcardImage();
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `poem-${Date.now()}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   const handleShare = async () => {
-    try {
-      await navigator.clipboard.writeText(generatedResult.poem);
-      alert('시가 클립보드에 복사되었습니다!');
-    } catch (error) {
-      console.error('Failed to copy:', error);
-      alert('복사에 실패했습니다.');
+    const blob = await capturePostcardImage();
+
+    // Web Share API (모바일 SNS 공유)
+    if (navigator.share && blob) {
+      try {
+        const file = new File([blob], 'poem.png', { type: 'image/png' });
+        await navigator.share({
+          title: '나의 시',
+          text: generatedResult.poem,
+          files: [file],
+        });
+        return;
+      } catch (error) {
+        // 사용자가 취소한 경우 무시
+        if ((error as Error).name === 'AbortError') return;
+      }
     }
+
+    // 폴백: 텍스트 공유 링크 (트위터/X)
+    const tweetText = encodeURIComponent(generatedResult.poem.slice(0, 200));
+    const tweetUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
+    window.open(tweetUrl, '_blank');
   };
 
   const handleRetry = () => {
@@ -145,12 +180,14 @@ const ResultPage: React.FC = () => {
       </Box>
 
       {/* Postcard */}
-      <PostcardView
-        imageData={generatedResult.imageData}
-        poem={generatedResult.poem}
-        createdAt={new Date().toISOString()}
-        poetStyle={generatedResult.poetStyle}
-      />
+      <Box ref={postcardRef}>
+        <PostcardView
+          imageData={generatedResult.imageData}
+          poem={generatedResult.poem}
+          createdAt={new Date().toISOString()}
+          poetStyle={generatedResult.poetStyle}
+        />
+      </Box>
 
       {/* Music Generation Section */}
       <Box sx={{ mt: 3 }}>
@@ -249,7 +286,7 @@ const ResultPage: React.FC = () => {
       >
         <Button
           variant="contained"
-          startIcon={<SaveIcon />}
+          startIcon={<DownloadIcon />}
           onClick={handleSave}
           sx={{
             backgroundColor: 'primary.main',
@@ -268,7 +305,7 @@ const ResultPage: React.FC = () => {
             },
           }}
         >
-          저장
+          다운로드
         </Button>
 
         <Button
