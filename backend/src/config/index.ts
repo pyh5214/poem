@@ -26,7 +26,18 @@ export const config = {
     model: 'lyria-002',
     musicDuration: 32.8,
     timeout: 120000
-  }
+  },
+  googleOAuth: {
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    callbackUrl: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/auth/google/callback',
+  },
+  jwt: {
+    secret: process.env.JWT_SECRET || 'default-secret-change-in-production',
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  },
+  adminEmail: process.env.ADMIN_EMAIL || '',
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
 };
 
 export const validateConfig = (): void => {
@@ -46,5 +57,24 @@ export const validateConfig = (): void => {
   } else {
     console.log('Vertex AI project configured:', config.vertexAI.projectId);
     console.log('Vertex AI location:', config.vertexAI.location);
+  }
+
+  if (!config.googleOAuth.clientId || !config.googleOAuth.clientSecret) {
+    console.warn('Warning: Google OAuth credentials not configured.');
+    console.warn('Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env for authentication.');
+  } else {
+    console.log('Google OAuth configured.');
+  }
+
+  if (config.jwt.secret === 'default-secret-change-in-production') {
+    console.warn('Warning: Using default JWT secret. Set JWT_SECRET in production!');
+  } else {
+    console.log('JWT secret is configured.');
+  }
+
+  if (!config.adminEmail) {
+    console.warn('Warning: ADMIN_EMAIL not set. Admin features may be limited.');
+  } else {
+    console.log('Admin email configured:', config.adminEmail);
   }
 };

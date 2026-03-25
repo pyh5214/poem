@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import poemRoutes from './poemRoutes';
 import musicRoutes from './musicRoutes';
 import postcardRoutes from './postcardRoutes';
+import authRoutes from './authRoutes';
+import adminRoutes from './adminRoutes';
 import { config } from '../config';
 import { HealthResponse } from '../types';
 
@@ -16,6 +18,12 @@ router.get('/health', (_req: Request, res: Response) => {
     geminiKeySet: !!config.geminiApiKey
   } as HealthResponse);
 });
+
+// Auth routes
+router.use('/auth', authRoutes);
+
+// Admin routes
+router.use('/admin', adminRoutes);
 
 // Poem routes
 router.use('/', poemRoutes);

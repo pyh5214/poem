@@ -128,3 +128,109 @@ export interface CreateFullPostcardResponse {
   poem: string;
   audioData: string;  // base64
 }
+
+// User types
+export type UserRole = 'user' | 'admin';
+
+export interface User {
+  id: string;
+  googleId: string;
+  email: string;
+  name: string;
+  profileImage: string | null;
+  role: UserRole;
+  isBlocked: boolean;
+  createdAt: string;
+  lastLoginAt: string | null;
+}
+
+export interface UserRow {
+  id: string;
+  google_id: string;
+  email: string;
+  name: string;
+  profile_image: string | null;
+  role: string;
+  is_blocked: number;
+  created_at: string;
+  last_login_at: string | null;
+}
+
+// Auth types
+export interface AuthTokenPayload {
+  userId: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface AuthTokens {
+  accessToken: string;
+  expiresIn: number;
+}
+
+export interface GoogleProfile {
+  id: string;
+  email: string;
+  name: string;
+  picture?: string;
+}
+
+// System settings
+export interface SystemSetting {
+  key: string;
+  value: any;
+  updatedAt: string;
+  updatedBy: string | null;
+}
+
+export interface SystemSettingRow {
+  key: string;
+  value: string;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+// Update Postcard types - add to existing interface
+export interface PostcardWithUser extends Postcard {
+  userId: string;
+  isPublic: boolean;
+  user?: User;
+}
+
+export interface PostcardRowWithUser extends PostcardRow {
+  user_id: string;
+  is_public: number;
+}
+
+// Admin types
+export interface UserStats {
+  totalUsers: number;
+  activeUsers: number;
+  blockedUsers: number;
+  newUsersToday: number;
+}
+
+export interface PostcardStats {
+  totalPostcards: number;
+  publicPostcards: number;
+  postcardsToday: number;
+  postcardsByStyle: Record<PoetOption, number>;
+}
+
+export interface AdminStats {
+  users: UserStats;
+  postcards: PostcardStats;
+}
+
+// Express request extension - imported via types/index.ts
+import { User as UserType } from './index';
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: UserType;
+    }
+  }
+}
+
+export {};

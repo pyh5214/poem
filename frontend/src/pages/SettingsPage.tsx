@@ -16,11 +16,15 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Avatar,
+  Chip,
 } from '@mui/material';
-import { Delete as DeleteIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Logout as LogoutIcon } from '@mui/icons-material';
 import { clearAllPostcards, getPostcardCount } from '../utils/storage';
+import { useAuth } from '../context/AuthContext';
 
 const SettingsPage: React.FC = () => {
+  const { user, logout } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
   const [language, setLanguage] = useState('ko');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -66,6 +70,99 @@ const SettingsPage: React.FC = () => {
           Settings
         </Typography>
       </Box>
+
+      {/* User Profile Section */}
+      {user && (
+        <Box
+          sx={{
+            backgroundColor: 'surface.containerLowest',
+            borderRadius: '8px',
+            boxShadow: '0 4px 20px rgba(56, 57, 42, 0.08)',
+            overflow: 'hidden',
+            mb: 2,
+            p: 3,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+            <Avatar
+              src={user.profileImage || undefined}
+              alt={user.name}
+              sx={{
+                width: 64,
+                height: 64,
+                border: '2px solid',
+                borderColor: 'primary.main',
+              }}
+            >
+              {user.name.charAt(0).toUpperCase()}
+            </Avatar>
+            <Box sx={{ flex: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                <Typography
+                  sx={{
+                    fontFamily: "'Newsreader', serif",
+                    fontWeight: 500,
+                    fontSize: '1.25rem',
+                    color: 'text.primary',
+                  }}
+                >
+                  {user.name}
+                </Typography>
+                {user.role === 'admin' && (
+                  <Chip
+                    label="Admin"
+                    size="small"
+                    sx={{
+                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontSize: '0.625rem',
+                      fontWeight: 500,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      backgroundColor: 'primary.main',
+                      color: 'primary.contrastText',
+                      height: '20px',
+                    }}
+                  />
+                )}
+              </Box>
+              <Typography
+                sx={{
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontSize: '0.875rem',
+                  color: 'text.secondary',
+                }}
+              >
+                {user.email}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Divider sx={{ borderColor: 'outline.variant', my: 2 }} />
+
+          {/* Account Role */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography
+              sx={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontWeight: 500,
+                fontSize: '0.875rem',
+                color: 'text.primary',
+              }}
+            >
+              계정 유형
+            </Typography>
+            <Typography
+              sx={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontSize: '0.875rem',
+                color: 'text.secondary',
+              }}
+            >
+              {user.role === 'admin' ? '관리자' : '일반 사용자'}
+            </Typography>
+          </Box>
+        </Box>
+      )}
 
       {/* Settings Card */}
       <Box
@@ -213,6 +310,36 @@ const SettingsPage: React.FC = () => {
           </ListItem>
         </List>
       </Box>
+
+      {/* Logout Button */}
+      {user && (
+        <Box sx={{ mt: 2 }}>
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<LogoutIcon />}
+            onClick={logout}
+            sx={{
+              fontFamily: "'Space Grotesk', sans-serif",
+              textTransform: 'uppercase',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              letterSpacing: '0.05em',
+              borderRadius: '8px',
+              py: 1.5,
+              borderColor: 'outline.variant',
+              color: 'text.primary',
+              '&:hover': {
+                borderColor: 'error.main',
+                backgroundColor: 'error.light',
+                color: 'error.main',
+              },
+            }}
+          >
+            로그아웃
+          </Button>
+        </Box>
+      )}
 
       {/* App Info */}
       <Box

@@ -8,15 +8,25 @@ import { convertWAVtoMP3, encodeToBase64, estimateDuration, generateSilentAudio 
 import { poetPrompts } from '../config/prompts';
 import { config } from '../config';
 import { CreatePostcardRequest, CreateFullPostcardRequest, ErrorResponse, PoetOption } from '../types';
+import { requireAuth } from '../middleware/auth';
 
 export const postcardController = {
   /**
    * POST /create-postcard - 통합 API: 이미지 → 시 → 음악 → 저장
+   * Requires authentication
    */
   async createFull(req: Request, res: Response): Promise<void> {
     console.log('=== Create full postcard request ===');
 
     try {
+      // Authentication check
+      if (!req.user) {
+        res.status(401).json({
+          error: 'Authentication required'
+        } as ErrorResponse);
+        return;
+      }
+
       const { imageData, poetStyle } = req.body as CreateFullPostcardRequest;
 
       // 입력 검증
@@ -78,7 +88,7 @@ export const postcardController = {
         ? imageData.split(',')[1]
         : imageData;
 
-      // Step 5: DB에 저장
+      // Step 5: DB에 저장 (with user_id from authenticated user)
       console.log('Step 5: Saving to database...');
       const postcard = postcardService.create({
         poem,
@@ -88,7 +98,7 @@ export const postcardController = {
         imageData: imageBase64,
         audioData,
         duration
-      });
+      }, req.user.id);
 
       console.log('Postcard created:', postcard.id);
 
@@ -109,9 +119,18 @@ export const postcardController = {
 
   /**
    * POST /postcards - Create a new postcard
+   * Requires authentication
    */
   create(req: Request, res: Response): void {
     try {
+      // Authentication check
+      if (!req.user) {
+        res.status(401).json({
+          error: 'Authentication required'
+        } as ErrorResponse);
+        return;
+      }
+
       const body: CreatePostcardRequest = req.body;
 
       // Validate required fields
@@ -132,7 +151,7 @@ export const postcardController = {
         return;
       }
 
-      const postcard = postcardService.create(body);
+      const postcard = postcardService.create(body, req.user.id);
       res.status(201).json(postcard);
     } catch (error) {
       console.error('Error creating postcard:', error);
@@ -144,14 +163,22 @@ export const postcardController = {
   },
 
   /**
-   * GET /postcards - List all postcards with pagination
+   * GET /postcards - List user's own postcards (requires auth)
    */
   list(req: Request, res: Response): void {
     try {
+      // Authentication check
+      if (!req.user) {
+        res.status(401).json({
+          error: 'Authentication required'
+        } as ErrorResponse);
+        return;
+      }
+
       const page = parseInt(req.query.page as string) || 1;
       const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
 
-      const result = postcardService.list(page, limit);
+      const result = postcardService.listByUser(req.user.id, page, limit);
       res.json(result);
     } catch (error) {
       console.error('Error listing postcards:', error);
@@ -163,16 +190,38 @@ export const postcardController = {
   },
 
   /**
+   * GET /postcards/public - List public postcards (no auth required)
+   */
+  listPublic(req: Request, res: Response): void {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+
+      const result = postcardService.listPublic(page, limit);
+      res.json(result);
+    } catch (error) {
+      console.error('Error listing public postcards:', error);
+      res.status(500).json({
+        error: 'Failed to list public postcards',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      } as ErrorResponse);
+    }
+  },
+
+  /**
    * GET /postcards/:id - Get a single postcard
+   * Checks visibility: public postcards are accessible to all, private only to owner
    */
   getById(req: Request, res: Response): void {
     try {
       const { id } = req.params;
-      const postcard = postcardService.getById(id);
+      const requestingUserId = req.user?.id;
+
+      const postcard = postcardService.getById(id, requestingUserId);
 
       if (!postcard) {
         res.status(404).json({
-          error: 'Postcard not found'
+          error: 'Postcard not found or access denied'
         } as ErrorResponse);
         return;
       }
@@ -189,15 +238,24 @@ export const postcardController = {
 
   /**
    * DELETE /postcards/:id - Delete a postcard
+   * Requires authentication and ownership verification
    */
   delete(req: Request, res: Response): void {
     try {
+      // Authentication check
+      if (!req.user) {
+        res.status(401).json({
+          error: 'Authentication required'
+        } as ErrorResponse);
+        return;
+      }
+
       const { id } = req.params;
-      const success = postcardService.delete(id);
+      const success = postcardService.delete(id, req.user.id);
 
       if (!success) {
         res.status(404).json({
-          error: 'Postcard not found'
+          error: 'Postcard not found or access denied'
         } as ErrorResponse);
         return;
       }
@@ -213,16 +271,66 @@ export const postcardController = {
   },
 
   /**
+   * PATCH /postcards/:id/visibility - Toggle postcard visibility
+   * Requires authentication and ownership verification
+   */
+  toggleVisibility(req: Request, res: Response): void {
+    try {
+      // Authentication check
+      if (!req.user) {
+        res.status(401).json({
+          error: 'Authentication required'
+        } as ErrorResponse);
+        return;
+      }
+
+      const { id } = req.params;
+      const { isPublic } = req.body;
+
+      if (typeof isPublic !== 'boolean') {
+        res.status(400).json({
+          error: 'Invalid request',
+          details: 'isPublic must be a boolean'
+        } as ErrorResponse);
+        return;
+      }
+
+      const success = postcardService.updateVisibility(id, req.user.id, isPublic);
+
+      if (!success) {
+        res.status(404).json({
+          error: 'Postcard not found or access denied'
+        } as ErrorResponse);
+        return;
+      }
+
+      res.json({
+        success: true,
+        isPublic
+      });
+    } catch (error) {
+      console.error('Error toggling visibility:', error);
+      res.status(500).json({
+        error: 'Failed to update visibility',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      } as ErrorResponse);
+    }
+  },
+
+  /**
    * GET /postcards/:id/image - Serve image file
+   * Respects visibility (public or owned by user)
    */
   getImage(req: Request, res: Response): void {
     try {
       const { id } = req.params;
-      const postcard = postcardService.getById(id);
+      const requestingUserId = req.user?.id;
+
+      const postcard = postcardService.getById(id, requestingUserId);
 
       if (!postcard || !postcard.imagePath) {
         res.status(404).json({
-          error: 'Image not found'
+          error: 'Image not found or access denied'
         } as ErrorResponse);
         return;
       }
@@ -240,15 +348,18 @@ export const postcardController = {
 
   /**
    * GET /postcards/:id/audio - Serve audio file
+   * Respects visibility (public or owned by user)
    */
   getAudio(req: Request, res: Response): void {
     try {
       const { id } = req.params;
-      const postcard = postcardService.getById(id);
+      const requestingUserId = req.user?.id;
+
+      const postcard = postcardService.getById(id, requestingUserId);
 
       if (!postcard || !postcard.audioPath) {
         res.status(404).json({
-          error: 'Audio not found'
+          error: 'Audio not found or access denied'
         } as ErrorResponse);
         return;
       }
