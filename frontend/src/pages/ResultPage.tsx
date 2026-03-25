@@ -72,7 +72,7 @@ const ResultPage: React.FC = () => {
       scale: 2,
       backgroundColor: '#ffffff',
     });
-    return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png'));
+    return new Promise((resolve) => canvas.toBlob((blob: Blob | null) => resolve(blob), 'image/png'));
   };
 
   const handleSave = async () => {
